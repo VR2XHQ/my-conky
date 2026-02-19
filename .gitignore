@@ -1,0 +1,13 @@
+# project excluded directory
+.private/
+.vscode/
+jinli-conky/
+miracle-conky/
+
+# tmp files
+*.bak
+
+# private files
+conky.conf
+conky_no_x11.conf
+
