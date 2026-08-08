@@ -58,13 +58,17 @@ Conky 好玩之處在於客製化的顯示，袛要你想得出的，大部份�
 初時直接加上參數來做設定，後來安裝了 ccmake (tui) 及 cmake-gui，參數的初始化更加便利了。
 
 ~~~bash
+# 下載 repo
+git clone https://github.com/brndnmtthws/conky.git
+cd ./conky
 mkdir -p ./build
 cd ./build
 # 直接加載參數
 cmake .. -DCMAKE_INSTALL_PREFIX=/home/beny/.local -DBUILD_LUA_CAIRO=ON -DBUILD_LUA_CAIRO_XLIB=ON -DBUILD_LUA_RSVG=ON -DBUILD_LUA_IMLIB2=ON -DBUILD_PULSEAUDIO=ON
 make clean
-make -j(nproc)
+make -j$(nproc)
 make install
+make uninstall  # 若要刪除已安裝的
 
 # 安裝 ccmake
 sudo apt install cmake-curses-gui
@@ -76,7 +80,7 @@ sudo apt install cmake-qt-gui
 
 - 在熟習流程的練習中，make uninstall 執行失敗。當時讓 AI 排查原因，它卻給了替代方案，建立了[這樣的腳本](tools/uninstall_from_manifest.sh)，及後問另一款 AI，它給了[改進的版本](tools/uninstall-f-m.sh)，兩者原理相近，語法運用稍不同，都記下來作為學習的記錄。這些腳本解決到問題，但對源碼竟然存在這樣的缺失，總有點不爽。深究下發現 [UninstallConky.cmake.in](https://github.com/brndnmtthws/conky/pull/2321/changes) 的語法存在問題，[稍為修正](docs/report_bug_github.md)就沒事了。作為 git [操作的練習](docs/how_to_git_stash.md)，而問題直觀無疑，於是做 push request，[被接納了](https://github.com/brndnmtthws/conky/pull/2321)。尋源的結果顯示，早於 uninstall 引進源碼時是正確的，可能在多年來的自動化維謢下，某次修改時反而弄錯了。事實上 uninstall 功能屬於小事，理所當然地一直被忽畧。但對於我這類小白，由於好奇心驅使，也許說白點是不甘心，它才被發掘出來。
 
-- 在製作要顯示的資訊內容時，每種 Conky 版本都嘗試執行，確保沒出錯。問題來了，有些於使用自編繹的 binary 時出錯。其中 [require('cairo') 及 require('cairo_xlib')](scripts/main.lua) 的運用，困擾了許久。原來源碼預設兩者是分離的，即是各有各的 .so，若不明示 require 它們，就無法調用。套件及 AppImage Conky 把 cairo_xlib 合包於 cairo 模組，導致如果加上 require('cairo_xlib') 反而報錯找不到獨立的 .so。為了要統一，唯有[硬改源碼](https://github.com/VR2XHQ/conky/tree/one-libcairo-build?tab=readme-ov-file)，讓編繹時把兩者合包。這也讓我認識到，git branch 的妙用，既保持 fork 來的倉庫同步到 upstream，與自定所需的 branch 互不干擾。
+- 在製作要顯示的資訊內容時，每種 Conky 版本都嘗試執行，確保沒出錯。問題來了，有些於使用自編繹的 binary 時出錯。其中 [require('cairo') 及 require('cairo_xlib')](scripts/main.lua-old) 的運用，困擾了許久。原來源碼預設兩者是分離的，即是各有各的 .so，若不明示 require 它們，就無法調用。套件及 AppImage Conky 把 cairo_xlib 合包於 cairo 模組，導致如果加上 require('cairo_xlib') 反而報錯找不到獨立的 .so。為了要統一，唯有[硬改源碼](https://github.com/VR2XHQ/conky/tree/one-libcairo-build?tab=readme-ov-file)，讓編繹時把兩者合包。這也讓我認識到，git branch 的妙用，既保持 fork 來的倉庫同步到 upstream，與自定所需的 branch 互不干擾。[（2026-08-08 補充）](SUPPLEMENT.md)
 
 
 ## 實作

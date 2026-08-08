@@ -1,6 +1,6 @@
 package.path = package.path .. ";" .. os.getenv("HOME") .. "/.config/conky/beny-conky/?.lua"
 -- 使用AppImage版本時要加上，因為要使用到系統的庫。
-package.cpath = package.cpath .. ";/usr/lib/conky/lib?.so"
+-- package.cpath = package.cpath .. ";/usr/lib/conky/lib?.so"
 
 -- 修正：手動載入自編譯的 Imlib2 舊版符號
 -- local imlib_path = "/home/beny/.local/lib/conky/libimlib2.so"
@@ -32,12 +32,40 @@ require('cairo-tools')
 -- require('imlib2')
 -- cairo works on Ubuntu, cairo_xlib works on Fedora
 -- 自編繹版本，要這部份去載入cairo_xlib。
-local ok, cairo = pcall(require, "cairo_xlib")
-if not ok then
-    cairo = require("cairo")
-end
+-- local ok, cairo = pcall(require, "cairo_xlib")
+-- if not ok then
+--     cairo = require("cairo")
+-- end
 -- make the cairo functions globally available if needed
 -- _G.cairo = cairo
+
+-- 自適配不同 Conky 版本 + 載入 Cairo
+local function init_cairo()
+    -- AppImage 路徑設定
+    local appdir = os.getenv("APPDIR")
+    if appdir then
+        local f = io.open(appdir .. "/usr/lib/conky/libcairo.so", "r")
+        if f then
+            f:close()
+            package.cpath = package.cpath .. ";" .. appdir .. "/usr/lib/conky/lib?.so"
+        end
+    end
+
+    -- 載入 Cairo
+    local status, cairo = pcall(require, 'cairo')
+    if status then
+        pcall(require, 'cairo_xlib')
+    end
+
+    return status, cairo
+end
+
+-- 主程式使用
+local ok, cairo = init_cairo()
+if not ok then
+    -- 錯誤處理（可選）
+    print("⚠️ Cairo 載入失敗，部分功能可能無法使用")
+end
 
 conky = {}
 require 'beny-config'
@@ -272,11 +300,11 @@ end
   
 function updateCpu(config)
   local pos = config.pos or {x = 0, y = 0}
-  local freq = conky_parse('${freq_g cpu0}')
+  local freq = conky_parse('${freq_g 1}')
   local hwmon = config.hwmon or getCoreHwmon()
   local tempSensor = config.tempSensor or 1
   local temperature = conky_parse('${hwmon ' .. hwmon .. ' temp '  .. tempSensor .. '}')
-  local avgCpu = conky_parse('${cpu cpu0}')
+  local avgCpu = conky_parse('${cpu}')
   local cpuCount = getCpuCount()
   local warnTemp, critTemp, maxTemp = 60, 80, 110
   if (cache.cpu == nil or cache.cpu.idleTemperatureCount < 1000) and (tonumber(freq) < 1 or tonumber(avgCpu) < 10) then

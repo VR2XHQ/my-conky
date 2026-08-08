@@ -1,19 +1,36 @@
-package.path = package.path .. ";" .. os.getenv("HOME") .. "/.config/conky/?.lua"
+-- package.path = package.path .. ";" .. os.getenv("HOME") .. "/.config/conky/?.lua"
 package.path = package.path .. ";" .. os.getenv("HOME") .. "/.config/conky/scripts/?.lua"
--- 使用AppImage版本時，要加上。
-package.cpath = package.cpath .. ";/usr/lib/conky/lib?.so"
 
--- 若用合包的 libcairo.so，袛要那段pcall來調用，就不需要另加這兩個 require
--- require('cairo')
--- require('cairo_xlib')
-
--- cairo works on Ubuntu, cairo_xlib works on Fedora
-local ok, cairo = pcall(require, "cairo_xlib")
-if not ok then
-  cairo = require("cairo")
-end
 -- make the cairo functions globally available if needed
 -- _G.cairo = cairo
+
+-- 自適配不同 Conky 版本 + 載入 Cairo
+local function init_cairo()
+    -- AppImage 路徑設定
+    local appdir = os.getenv("APPDIR")
+    if appdir then
+        local f = io.open(appdir .. "/usr/lib/conky/libcairo.so", "r")
+        if f then
+            f:close()
+            package.cpath = package.cpath .. ";" .. appdir .. "/usr/lib/conky/lib?.so"
+        end
+    end
+
+    -- 載入 Cairo
+    local status, cairo = pcall(require, 'cairo')
+    if status then
+        pcall(require, 'cairo_xlib')
+    end
+
+    return status, cairo
+end
+
+-- 主程式使用
+local ok, cairo = init_cairo()
+if not ok then
+    -- 錯誤處理（可選）
+    print("⚠️ Cairo 載入失敗，部分功能可能無法使用")
+end
 
 conky = {}
 require 'conky_lua'
@@ -71,7 +88,15 @@ local is_updating = false -- 門戶鎖，防止重疊執行
 -- ==========================================
 -- 3. 內部工具函數 (Internal Local Functions)
 -- ==========================================
-    
+-- 動態讀取 Caps Lock 與 Num Lock 狀態（相容 Wayland / X11 及跨機器）
+local function get_led_state(led_name)
+    -- 利用 grep 檢查所有 matching 檔案中是否有任意一個值為 1
+    local handle = io.popen("grep -h '1' /sys/class/leds/input*::" .. led_name .. "/brightness 2>/dev/null")
+    local result = handle:read("*a")
+    handle:close()
+    -- 如果有拿到 '1'，代表該鎖定鍵為開啟狀態
+    return (result and result:find("1")) and "On" or "Off"
+end
 
 
 -- ==========================================
@@ -128,8 +153,10 @@ updateClock = function(cr, config)
   
   local time = os.date(config.timeFormat or '%H:%M') --conky_parse('${time %H:%M:%S}')
   local date = os.date(config.dateFormat or '%A, %b %e') --conky_parse('${time %Y-%m-%d}')
-  local caps_lock = conky_parse('${key_caps_lock}')
-  local num_lock = conky_parse('${key_num_lock}')
+  --local caps_lock = conky_parse('${key_caps_lock}')
+  --local num_lock = conky_parse('${key_num_lock}')
+  local caps_lock = get_led_state("capslock")
+  local num_lock  = get_led_state("numlock")
   
   if isIconFontAvailable then
     draw.text(cr, icon.x, icon.y, config.osIcon, icon.f, icon.s, icon.c)
@@ -165,10 +192,10 @@ updateSystem = function(cr, config)
   local loadavg = conky_parse('${loadavg}')
   local processes = conky_parse('${processes}')
   local running_processes = conky_parse('${running_processes}')
-  local id = conky_parse('${execi 3600 lsb_release -irs}')
-  id = id:gsub('\n', ' '):gsub('^%s*(.-)%s*$', '%1') -- 取得 OS 資訊並立即清理換行
+  --local id = conky_parse('${execi 3600 lsb_release -irs}')
+  --id = id:gsub('\n', ' '):gsub('^%s*(.-)%s*$', '%1') -- 取得 OS 資訊並立即清理換行
   -- 替代方案（更快 ，不需執行外部指令）
-  -- local id = conky_parse("${execi 3600 grep '^PRETTY_NAME=' /etc/os-release | cut -d'\"' -f2}")
+  local id = conky_parse("${execi 3600 grep '^PRETTY_NAME=' /etc/os-release | cut -d'\"' -f2}")
   
   draw.text(cr, icon.x, icon.y, "\u{f0aab}", icon.f, icon.s, icon.c, true)
   draw.text(cr, x_tab, y, id, text.f, text.s + scale(4), Col.OW, true)
@@ -223,7 +250,7 @@ updateCpuMem = function(cr, config)
   local cpu_temp = fetcher.get_cpu_temp()
   
   draw.text(cr, icon.x, icon.y, "\u{f4bc}", icon.f, icon.s, icon.c, false)
-  draw.cpu_grid(cr, x + x_tab, y + line_h, grid, settings.colors, text.f)
+  draw.cpu_grid(cr, x + x_tab, y + line_h, grid, settings.colors, text.f, cpu_cores)
   
   -- 定義標籤寬度（例如固定佔 14 個字元）
   -- %-14s 代表靠左對齊，佔 14 格

@@ -135,7 +135,7 @@ function M.background(cr, w, h)
   cairo_stroke(cr)
 end
 
-function M.cpu_grid(cr, x_start, y_start, grid, color, font)
+function M.cpu_grid(cr, x_start, y_start, grid, color, font, cpu_cores) -- 補回cpu_cores的傳遞
   local columns = 4
   -- 預先計算 scale，避免在迴圈中反覆呼叫函數
   local x_spacing = scale(grid.x or 70) -- 每個數據之間的水平間距
@@ -160,7 +160,7 @@ function M.cpu_grid(cr, x_start, y_start, grid, color, font)
   })
 
   -- 4. 繪製各個核心數據
-  for cpu_num = 1, 8 do  -- 通常用戶習慣看到 C1-C8，而非 C0-C7
+  for cpu_num = 1, cpu_cores do  -- 通常用戶習慣看到 C1-C8，而非 C0-C7
     local val_str = conky_parse("${cpu cpu" .. cpu_num .. "}")
     local val_num = tonumber(val_str) or 0
   

@@ -14,6 +14,14 @@ function mtime()
   return math.floor(os.time() * 1000) -- + socket.gettime() * 1000
 end
 
+-- 僅供參考，沒有使用到。
+function os.capture(cmd)
+  local f = assert(io.popen(cmd, 'r'))
+  local s = assert(f:read('*a'))
+  f:close()
+  return s
+end
+
 function conky_parse_num(expr)
   local res = conky_parse("${" .. expr .. "}")
   if res == nil then return 0 end
@@ -26,33 +34,71 @@ function rgba_to_r_g_b_a(color)
   return color[1], color[2], color[3], color[4]
 end
 
-function getOsIcon() -- this is only tested on fedora
-	--local distro = os.capture('lsb_release -is'):lower():match('^%s*(.-)%s*$')
-	local osName = io.popen('lsb_release -is'):read('*l') or 'linux'
-	local distro = osName:lower():match('^%s*(.-)%s*$')
-	local icon_map = {
-		fedora = '\u{f30a}',
-		ubuntu = '\u{f0548}',
-		deepin = '\u{f321}',
-		archlinux = '\u{f303}',
-		manjaro = '\u{f312}',
-		debian = '\u{e77d}',
-		archcraft = '\u{f345}',
-		mint = '\u{f08ed}',
-		linuxmint = '\u{f08ed}',
-		nixos = '\u{f313}',
-		gentoo = '\u{f30d}',
-		elementary = '\u{f309}',
-		endeavour = '\u{f322}',
-		centos = '\u{f304}',
-		pop_os = '\u{f32a}',
-		suse = '\u{ef6d}',
-		kubuntu = '\u{f333}',
-		raspberry = '\u{f315}',
-	}
-	print("Distro detected: " .. distro)
-	local icon = icon_map[distro] or '\u{ebc6}' -- default linux icon
-	return icon
+-- function getOsIcon() -- this is only tested on fedora -- 抄自 jinli-conky
+-- 	--local distro = os.capture('lsb_release -is'):lower():match('^%s*(.-)%s*$')
+-- 	local osName = io.popen('lsb_release -is'):read('*l') or 'linux'
+-- 	local distro = osName:lower():match('^%s*(.-)%s*$')
+-- 	local icon_map = {
+-- 		fedora = '\u{f30a}',
+-- 		ubuntu = '\u{f0548}',
+-- 		deepin = '\u{f321}',
+-- 		archlinux = '\u{f303}',
+-- 		manjaro = '\u{f312}',
+-- 		debian = '\u{e77d}',
+-- 		archcraft = '\u{f345}',
+-- 		mint = '\u{f08ed}',
+-- 		linuxmint = '\u{f08ed}',
+-- 		nixos = '\u{f313}',
+-- 		gentoo = '\u{f30d}',
+-- 		elementary = '\u{f309}',
+-- 		endeavour = '\u{f322}',
+-- 		centos = '\u{f304}',
+-- 		pop_os = '\u{f32a}',
+-- 		suse = '\u{ef6d}',
+-- 		kubuntu = '\u{f333}',
+-- 		raspberry = '\u{f315}',
+-- 	}
+-- 	print("Distro detected: " .. distro)
+-- 	local icon = icon_map[distro] or '\u{ebc6}' -- default linux icon
+-- 	return icon
+-- end
+
+function getOsIcon()
+  local osName = 'linux'
+
+  local f = io.open('/etc/os-release', 'r')
+  if f then
+    for line in f:lines() do
+      -- 匹配 ID=ubuntu 或 ID="ubuntu"，並排除 VERSION_ID, ID_LIKE 等
+      local id = line:match('^ID="?([%w_%-]+)"?')
+      if id then
+        osName = id
+        break
+      end
+    end
+    f:close()
+  end
+
+  local distro = osName:lower()
+
+  -- 清除任何潛在的空白或隱藏字元
+  distro = distro:gsub('%s+', '')
+
+  local icon_map = {
+    fedora = '\u{f30a}',
+    linuxmint = '\u{f30e}', -- Mint, also f08ed
+    ubuntu = '\u{f320}', -- Budgie
+    arch = '\u{f303}',
+    debian = '\u{f306}',
+    pop = '\u{f32a}', -- Pop!_OS
+    linux = '\u{f31b}',
+  }
+
+  local icon = icon_map[distro] or icon_map['linux']
+  print("Distro detected: [" .. distro .. "]")
+  print("Icon selected: " .. icon)
+
+  return icon
 end
 
 local width, height, dpi = scale(360), scale(800), 96
@@ -70,11 +116,16 @@ conky.config = {
     own_window = true,
     own_window_type = 'normal',
     own_window_hints = 'undecorated,sticky,below,skip_taskbar,skip_pager',
-    own_window_transparent = false,
-    own_window_argb_visual = true,
-    own_window_argb_value = 0,
+    -- own_window_transparent = false,
+    -- own_window_argb_visual = true,
+    -- own_window_argb_value = 0,
     -- own_window_colour = '#0b0d18',
     -- own_window_colour = '#000000',
+    -- 以上語法，在新版conky(1.24> ?)將不再使用。
+    own_window_colour = '#10000040',
+    -- own_window_colour = '#1E1E2E80',
+    -- own_window_colour = '#2E344099',
+    -- own_window_colour = '#00000000',
 
     -- 字體與顏色
     default_color = 'skyblue',
@@ -90,7 +141,7 @@ conky.config = {
 
     -- 載入 Lua 腳本
     lua_load = '/home/beny/.config/conky/scripts/main.lua',
-    lua_draw_hook_pre = 'main',
+    lua_draw_hook_pre = 'main', -- 可以不用寫做 conky_main
 
 };
 
