@@ -38,3 +38,17 @@ Conky 源碼採用 cairo/cairo_xlib 模組獨立生成，不會造成執行上�
 
 ## 最後 。。。
 暫時就到此為止，待日後有新問題出現時，觸發另一次探究。
+
+## 2026-08-17
+沒料到然後來得真快，原以為打包了就輕鬆在不同 distro 上安裝，事實仍要做點調整，主因是 conky 對系統庫的依賴。編繹是在特定的環境下進行，移到別 distro 使用時，總會有些地方要考慮，否則隨時出問題。這就是為何各系統都有自家 conky 發行版本，才能穩定地工作。現時試驗的可謂 workaround 版本，最理想還是各自在原生環境下編繹比較妥當。
+
+包含依賴庫的做法[容易踏坑](docs/additional_notes/Conky共享庫缺失解決方案.md)，想當然的做法，竟然令系統掛掉，還好[能夠修復](docs/additional_notes/Fedora%20外置%20SSD%20啟動修復指南.md)。
+
+暫時在以下系統安裝後可用，會否還出其他故障，還需長時間的使用才能發現，這是除錯的樂趣。
+- Fedora Workstation
+- Ubuntu Budgie
+- Pop!_OS
+
+今次修正，主要是針對打包腳本，另[定了新名](tools/package-conky.sh)以分別。當然又要另建[新的Tag及Pre-release](https://github.com/VR2XHQ/conky/releases/tag/conky-portable-20260815), 留個記錄。
+
+至此真的要暫告一段，還有太多無聊研究等著開啟。
