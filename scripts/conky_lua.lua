@@ -111,6 +111,8 @@ conky.config = {
     no_buffers = true,
     use_xft = true,
     draw_borders = false,
+    -- output_backend = 'wayland',
+    output_backend = 'x11',
 
     -- GNOME 專用視窗設定（穩定透明）
     own_window = true,
@@ -122,7 +124,8 @@ conky.config = {
     -- own_window_colour = '#0b0d18',
     -- own_window_colour = '#000000',
     -- 以上語法，在新版conky(1.24> ?)將不再使用。
-    own_window_colour = '#10000040',
+    -- conky(1.25>)改用 own_widow_color
+    own_window_color = '#10000040',
     -- own_window_colour = '#1E1E2E80',
     -- own_window_colour = '#2E344099',
     -- own_window_colour = '#00000000',

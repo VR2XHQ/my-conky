@@ -39,6 +39,7 @@ Conky 源碼採用 cairo/cairo_xlib 模組獨立生成，不會造成執行上�
 ## 最後 。。。
 暫時就到此為止，待日後有新問題出現時，觸發另一次探究。
 
+
 ## 2026-08-17
 沒料到然後來得真快，原以為打包了就輕鬆在不同 distro 上安裝，事實仍要做點調整，主因是 conky 對系統庫的依賴。編繹是在特定的環境下進行，移到別 distro 使用時，總會有些地方要考慮，否則隨時出問題。這就是為何各系統都有自家 conky 發行版本，才能穩定地工作。現時試驗的可謂 workaround 版本，最理想還是各自在原生環境下編繹比較妥當。
 
@@ -52,3 +53,32 @@ Conky 源碼採用 cairo/cairo_xlib 模組獨立生成，不會造成執行上�
 今次修正，主要是針對打包腳本，另[定了新名](tools/package-conky.sh)以分別。當然又要另建[新的Tag及Pre-release](https://github.com/VR2XHQ/conky/releases/tag/conky-portable-20260815), 留個記錄。
 
 至此真的要暫告一段，還有太多無聊研究等著開啟。
+
+
+## 2026-11-12
+最近升級 Fedora 到版本45, [問題](docs/additional_notes/)又來了，証明這方法存在太多隱患。若然想用最新版本，還是老老實實在各別系統上編繹較為穩妥，或者直接採用 AppImage 版本。
+
+在折騰的過程中，多長了點智識。Conky upstream 在過去幾個月，已升級到 1.26，有許多修改，其中對 Wayland 的支援有較多動作，腳本的[設定語法](scripts/conky_lua.lua)要做微調。暫時 Fedora Workstation 仍袛能用 XWayland 路徑去執行，同時必需[延遲啟動](./start-conky.sh)，才能正常在桌面顯示。
+
+```text
+output_backend = 'x11' 或 'wayland' 
+own_window_color
+```
+
+對於 repo fork，最好保持 origin/main 與 upstream 同步，利用 branch 去做自己的修改實驗。
+
+```bash
+git config --global pull.ff only  # 設定全域，避免錯誤 commit
+
+git branch --set-upstream-to=upstream/main main  # 設定追蹤 upstream
+git config branch.main.pushRemote origin  # 設定袛 push 去 origin/main
+
+git fetch upstream  # 找取 upstream 更新
+git branch -vv  # 核對當前狀態
+git merge --ff-only upstream/main  # 同步 upstream
+git push  # 推送回 origin/main
+
+git update-index --assume-unchanged scripts/conky_lua.lua  # 忽略對某本地檔案所作的修改
+```
+
+這次補充，相信真的是最後一次了。實驗的目的已經達至，應該放下了。
